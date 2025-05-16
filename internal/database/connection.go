@@ -10,6 +10,7 @@ import (
 
 var DB *sql.DB
 
+//db config
 func Connect() error {
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
