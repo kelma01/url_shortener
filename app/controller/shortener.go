@@ -7,6 +7,6 @@ import (
 
 func WelcomeFunc(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H {
-		"message": "Welcome to URL Shortener, API works",
+		"message": "Welcome to URL Shortener",
 	})
 }
