@@ -2,11 +2,9 @@ package shortener
 
 import (
     "github.com/gofiber/fiber/v2"
-	//"database/sql"
 	"math/rand"
 	"time"
 	"url_shortener/internal/database"
-	//"url_shortener/app/entities"
 
 )
 
@@ -16,6 +14,7 @@ const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func ShortenURL(c *fiber.Ctx) error {
 	//payload'taki fieldlarin yer aldigi struct
+	//burada tanimlamamizin sebebi hem body.xxx diyerek pass edilebilmesi hem de post sonrasi fieldlarla eslesmes icin
 	type reqBody struct {
 		OriginalURL string `json:"original_url"`
 		ExpiresAt *time.Time `json:expires_at, omitempty`
