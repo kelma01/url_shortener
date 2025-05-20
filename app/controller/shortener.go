@@ -5,8 +5,14 @@ import (
 	"math/rand"
 	"time"
 	"url_shortener/internal/database"
-
+	"github.com/redis/go-redis/v9"
+	"context"
 )
+
+//redis client setupu
+var redisClient = redis.NewClient(&redis.Options{
+	Addr: "localhost:6379",
+})
 
 //convert algosu icin gerekli
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -17,34 +23,35 @@ postmanda girilecek payload:
 	"original_url": "https://www.google.com"
 }
 */
+//TODO: short url create ederken unique değilse lineer probing ile yenisi aranacak. 
 func ShortenURL(c *fiber.Ctx) error {
-	//payload'taki fieldlarin yer aldigi struct
-	//burada tanimlamamizin sebebi hem body.xxx diyerek pass edilebilmesi hem de post sonrasi fieldlarla eslesmes icin
+	now := time.Now()
+	expiresAt := now.Add(5 * time.Minute)
+
 	type reqBody struct {
-		OriginalURL string `json:"original_url"`
-		ExpiresAt *time.Time `json:expires_at, omitempty`
+		OriginalURL string     `json:"original_url"`
 	}
 	var body reqBody
 
-	//invalid json body case
 	if err := c.BodyParser(&body); err != nil || body.OriginalURL == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
 	}
 
-	short := generateShortURL(6)
-	now := time.Now()
-	_, err := database.DB.Exec("INSERT INTO url_table (original_url, short_url, created_at, expires_at) VALUES ($1, $2, $3, $4)", body.OriginalURL, short, now, body.ExpiresAt)
-	// server error case
+	short := generateShortURL(8)
+
+	redisClient.Set(context.Background(), short, body.OriginalURL, 5*time.Minute)
+
+
+	_, err := database.DB.Exec("INSERT INTO url_table (original_url, short_url, created_at, expires_at) VALUES ($1, $2, $3, $4)", body.OriginalURL, short, now, expiresAt)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
 	}
-	//post 201
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"created_at":   now,
 		"deleted_at":   nil,
 		"original_url": body.OriginalURL,
 		"short_url":    "http://localhost:3000/" + short,
-		"expires_at":   body.ExpiresAt,
+		"expires_at":   expiresAt,
 		"usage_count":  0,
 	})
 }
@@ -100,14 +107,31 @@ func RedirectURL(c *fiber.Ctx) error {
 	return c.Redirect(originalURL, fiber.StatusTemporaryRedirect)
 }
 
+//yuz kez denedim biseler olmadi copilot bitirdi
 func DeleteURL(c *fiber.Ctx) error {
 	shortURL := c.Params("short_url")
 	if shortURL == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no url detected for redirecting"})
 	}
-	_, err := database.DB.Exec("DELETE FROM url_table WHERE short_url=$1", shortURL)
+	var exists bool
+	err := database.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM url_table WHERE short_url=$1)", shortURL).Scan(&exists)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	if !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
+	}
+
+	result, err := database.DB.Exec("DELETE FROM url_table WHERE short_url=$1", shortURL)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	if rowsAffected == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "URL deleted successfully"})
 }

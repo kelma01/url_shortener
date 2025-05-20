@@ -8,4 +8,14 @@ Goal of this project is shortening an URL using Go language and its Fiber backen
 2. Make sure that your PC has Go. Type `go version` in terminal to check, if it is not installed, (in Linux) you can type `sudo snap install go` on terminal to install it
 3. Install the Fiber framework by typing `go get -u github.com/gofiber/v2`
 4. Install PostgreSQL to manage DB relations with `sudo apt install postgresql` and create your user in there with the name of database you will use. With `sudo -u postgres psql`, enter the PostgreSQL terminal and `\c url_shortener` to use the db.
-5. With `go run cmd/server/main.go` you can run the project in your localhost. Host is served on `localhost:8080`.
+5. Install Redis with `sudo apt install redis-tools` and `sudo apt install redis-server`. Then start with `sudo systemctl start redis-server`. After that with `redis-cli`, the redis terminal can be used.
+6. With `go run cmd/server/main.go` you can run the project in your localhost. Host is served on `localhost:8080`.
+
+
+Kısayollar:
+
+curl post payload: 
+curl --header "Content-Type: application/json" --request POST --data '{"original_url": "https://www.google.com"}' http://localhost:8080
+
+curl delete paylaod:
+curl -X DELETE http://localhost:8080/shorturl

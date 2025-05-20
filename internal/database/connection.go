@@ -16,8 +16,8 @@ func Connect() error {
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
         getEnv("DB_HOST", "localhost"),
         getEnv("DB_PORT", "5432"),
-        getEnv("DB_USER", "test"),
-        getEnv("DB_PASSWORD", "test"),
+        getEnv("DB_USER", "kerem"),
+        getEnv("DB_PASSWORD", "kerem"),
         getEnv("DB_NAME", "url_shortener"),
     )
     db, err := sql.Open("postgres", connection)

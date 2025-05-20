@@ -10,7 +10,7 @@ func Migrate(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS url_table(
 		id SERIAL PRIMARY KEY,
-		original_url TEXT NOT NULL UNIQUE,
+		original_url TEXT NOT NULL,
 		short_url VARCHAR(16) UNIQUE NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		deleted_at TIMESTAMP,
