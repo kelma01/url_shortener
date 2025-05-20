@@ -11,7 +11,12 @@ import (
 //convert algosu icin gerekli
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-
+/*
+postmanda girilecek payload:
+{
+	"original_url": "https://www.google.com"
+}
+*/
 func ShortenURL(c *fiber.Ctx) error {
 	//payload'taki fieldlarin yer aldigi struct
 	//burada tanimlamamizin sebebi hem body.xxx diyerek pass edilebilmesi hem de post sonrasi fieldlarla eslesmes icin
@@ -33,10 +38,17 @@ func ShortenURL(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
 	}
-
-	//post 200
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"short_url": short})
+	//post 201
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"created_at":   now,
+		"deleted_at":   nil,
+		"original_url": body.OriginalURL,
+		"short_url":    "http://localhost:3000/" + short,
+		"expires_at":   body.ExpiresAt,
+		"usage_count":  0,
+	})
 }
+
 func generateShortURL(size int) string {
 	rand.Seed(time.Now().UnixNano())
 	b:=   make([]byte, size)
@@ -45,6 +57,7 @@ func generateShortURL(size int) string {
 	}
 	return string(b)
 }
+
 func ListURLs(c *fiber.Ctx) error {
 	rows, err := database.DB.Query("SELECT original_url, short_url, usage_count, created_at, deleted_at, expires_at FROM url_table")
 	if err != nil {
@@ -56,7 +69,7 @@ func ListURLs(c *fiber.Ctx) error {
 		ShortURL    string     `json:"short_url"`
 		UsageCount	int		   `json:"usage_count"`
 		CreatedAt   time.Time  `json:"created_at"`
-		DeletedAt	*time.Time  `json:"deleted_at"`
+		DeletedAt	*time.Time `json:"deleted_at"`
 		ExpiresAt   *time.Time `json:"expires_at"`
 	}
 
@@ -87,11 +100,14 @@ func RedirectURL(c *fiber.Ctx) error {
 	return c.Redirect(originalURL, fiber.StatusTemporaryRedirect)
 }
 
-func URLStats(c *fiber.Ctx) error {
-    return c.JSON(fiber.Map{"message": "URLStats"})
-}
-
 func DeleteURL(c *fiber.Ctx) error {
-    return c.JSON(fiber.Map{"message": "DeleteURL"})
+	shortURL := c.Params("short_url")
+	if shortURL == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no url detected for redirecting"})
+	}
+	_, err := database.DB.Exec("DELETE FROM url_table WHERE short_url=$1", shortURL)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "URL deleted successfully"})
 }
-
