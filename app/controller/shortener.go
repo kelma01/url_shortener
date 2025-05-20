@@ -75,7 +75,16 @@ func ListURLs(c *fiber.Ctx) error {
 }
 
 func RedirectURL(c *fiber.Ctx) error {
-    return c.JSON(fiber.Map{"message": "RedirectURL"})
+	shortURL := c.Params("short_url")
+	if shortURL == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no url detected for redirecting"})
+	}
+	var originalURL string
+	err := database.DB.QueryRow("SELECT original_url FROM url_table WHERE short_url=$1", shortURL).Scan(&originalURL)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Redirect(originalURL, fiber.StatusTemporaryRedirect)
 }
 
 func URLStats(c *fiber.Ctx) error {
