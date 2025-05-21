@@ -20,6 +20,19 @@ var redisClient = redis.NewClient(&redis.Options{
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func ShortenURL(c *fiber.Ctx) error {
+	ip := c.IP()
+
+    count, err := redisClient.Incr(context.Background(), ip).Result()
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "rate limit error"})
+    }
+    if count == 1 {
+        redisClient.Expire(context.Background(), ip, time.Minute)	//1 dakika icinde rate limit sifirlanir
+    }
+    if count > 5 {	//belirilen sure icerisinde(1dk) maks 5 post req yollanabilir
+        return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "Rate limit exceeded. Please try again later."})
+    }
+
 	now := time.Now()
 	expiresAt := now.Add(5 * time.Minute)
 
@@ -37,7 +50,7 @@ func ShortenURL(c *fiber.Ctx) error {
 	redisClient.Set(context.Background(), short, body.OriginalURL, 5*time.Minute)
 
 
-	_, err := database.DB.Exec("INSERT INTO url_table (original_url, short_url, created_at, expires_at) VALUES ($1, $2, $3, $4)", body.OriginalURL, short, now, expiresAt)
+	_ , err = database.DB.Exec("INSERT INTO url_table (original_url, short_url, created_at, expires_at) VALUES ($1, $2, $3, $4)", body.OriginalURL, short, now, expiresAt)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
 	}
