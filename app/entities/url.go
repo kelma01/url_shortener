@@ -1,6 +1,6 @@
 package entities
 
-//dbde tutulacak olan url tuplelarinin schemasi
+//dbde tanimlanmis olan columnlarin go'da nasil kullanilacaklarini tanimlayan struct semasi
 type URL struct {
 	ID 	  		int    		`db:"id"`
 	OriginalURL	string		`db:"original_url"`

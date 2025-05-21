@@ -10,6 +10,8 @@ import (
 )
 
 //redis client setupu
+//rediste tutulma structure'inda key degerleri short url kismi value'si ise original_url kisim oluyor
+// {"zRWzOuQT": "https://www.google.com"} gibi gibi.
 var redisClient = redis.NewClient(&redis.Options{
 	Addr: "localhost:6379",
 })
@@ -119,34 +121,6 @@ func RedirectURL(c *fiber.Ctx) error {
     return c.Redirect(val, fiber.StatusTemporaryRedirect)
 }
 
-//yuz kez denedim biseler olmadi copilotla bitirdim
-func DeleteURL(c *fiber.Ctx) error {
-	shortURL := c.Params("short_url")
-	if shortURL == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no url detected for redirecting"})
-	}
-	var exists bool
-	err := database.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM url_table WHERE short_url=$1)", shortURL).Scan(&exists)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	if !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
-	}
-
-	result, err := database.DB.Exec("DELETE FROM url_table WHERE short_url=$1", shortURL)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	if rowsAffected == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
-	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "URL deleted successfully"})
-}
 func StatsURL(c *fiber.Ctx) error {
 	shortURL := c.Params("short_url")
 	if shortURL == "" {
@@ -169,4 +143,18 @@ func StatsURL(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
 	}
 	return c.JSON(res)
+}
+
+func DeleteURL(c *fiber.Ctx) error {
+	shortURL := c.Params("short_url")
+	if shortURL == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no url detected for redirecting"})
+	}
+	
+	//redisi sifirlamak yeterli cunku zaten redirect ederken redis'teki ttl'i de kontrol ederek redirect ediyor, redis.del islemi yeterli
+	_, _ = redisClient.Del(context.Background(), shortURL).Result()
+
+	_, _ = database.DB.Exec("UPDATE url_table SET deleted_at=$1 WHERE short_url = $2", time.Now(), shortURL)
+	
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "URL deleted successfully"})
 }
