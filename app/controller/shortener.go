@@ -43,19 +43,31 @@ func ShortenURL(c *fiber.Ctx) error {
 		"created_at":   now,
 		"deleted_at":   nil,
 		"original_url": body.OriginalURL,
-		"short_url":    "http://localhost:3000/" + short,
+		"short_url":    "http://localhost:8080/" + short,
 		"expires_at":   expiresAt,
 		"usage_count":  0,
 	})
 }
 
 func generateShortURL(size int) string {
-	rand.Seed(time.Now().UnixNano())
-	b:=   make([]byte, size)
-	for i := range size {
-		b[i] = charset[rand.Intn(len(charset))]
+	for {
+		rand.Seed(time.Now().UnixNano())
+		b := make([]byte, size)
+		for i := range b {
+			b[i] = charset[rand.Intn(len(charset))]
+		}
+		short := string(b)
+
+		//shorted url'lerin unique olmasi gerekli, bu yuzden her uretilen icin oncelikle db'de kontrolu yapiliyor
+		var exists bool
+		err := database.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM url_table WHERE short_url=$1)", short).Scan(&exists)
+		if err != nil {
+			return short
+		}
+		if !exists {
+			return short
+		}
 	}
-	return string(b)
 }
 
 func ListURLs(c *fiber.Ctx) error {
