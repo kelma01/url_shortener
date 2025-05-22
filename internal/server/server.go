@@ -11,7 +11,7 @@ import (
 func RunServer(){
 	//db kontrolu yapiliyor
 	if err := database.Connect(); err != nil {
-		log.Fatal("DB connection failed: %v", err)
+		log.Fatalf("DB connection failed: %v", err)
 	}
 
 	log.Println("DB connection successful")

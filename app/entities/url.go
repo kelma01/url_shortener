@@ -1,5 +1,7 @@
 package entities
 
+import "time"
+
 //dbde tanimlanmis olan columnlarin go'da nasil kullanilacaklarini tanimlayan struct semasi
 type URL struct {
 	ID 	  		int    		`db:"id"`

@@ -13,7 +13,7 @@ import (
 //rediste tutulma structure'inda key degerleri short url kismi value'si ise original_url kisim oluyor
 // {"zRWzOuQT": "https://www.google.com"} gibi gibi.
 var redisClient = redis.NewClient(&redis.Options{
-	Addr: "localhost:6379",
+	Addr: "redis:6379",
 })
 
 //convert algosu icin gerekli
@@ -24,7 +24,7 @@ func ShortenURL(c *fiber.Ctx) error {
 
     count, err := redisClient.Incr(context.Background(), ip).Result()
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "rate limit error"})
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
     }
     if count == 1 {
         redisClient.Expire(context.Background(), ip, time.Minute)	//1 dakika icinde rate limit sifirlanir
