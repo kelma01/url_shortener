@@ -10,6 +10,7 @@ Goal of this project is shortening an URL using Go language and its Fiber backen
 4. Install PostgreSQL to manage DB relations with `sudo apt install postgresql` and create your user in there with the name of database you will use. With `sudo -u postgres psql`, enter the PostgreSQL terminal and `\c url_shortener` to use the db. Do not forget to change DB configuration files in code.
 5. Install Redis with `sudo apt install redis-tools` and `sudo apt install redis-server`. Then start with `sudo systemctl start redis-server`. After that with `redis-cli`, the redis terminal can be used.
 6. With `go run cmd/server/main.go` you can run the project in your localhost. Host is served on `localhost:8080`.
+7. Dockerized. Run `./start_docker`. To access redis client terminal in dockerized project, run `redis-cli -h <ip of your docker machine> -p 6380`. To see docker machine ip, `docker network inspect bridge`.
 
 
 Kısayollar:
