@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: url-shortener-app
+  template:
+    metadata:
+      labels:
+        app: url-shortener-app
+    spec:
+      containers:
+      - name: app
+        image: urltest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: REDIS_ADDR
+          value: "url-shortener-redis"
+        - name: POSTGRES_HOST
+          value: "url-shortener-db"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_USER
+          value: "kerem"
+        - name: POSTGRES_PASSWORD
+          value: "kerem"
+        - name: POSTGRES_DB
+          value: "url_shortener"

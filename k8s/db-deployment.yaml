@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: url-shortener-db
+  template:
+    metadata:
+      labels:
+        app: url-shortener-db
+    spec:
+      containers:
+      - name: db
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "url_shortener"
+        - name: POSTGRES_USER
+          value: "kerem"
+        - name: POSTGRES_PASSWORD
+          value: "kerem"

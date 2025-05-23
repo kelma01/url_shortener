@@ -13,7 +13,7 @@ import (
 //rediste tutulma structure'inda key degerleri short url kismi value'si ise original_url kisim oluyor
 // {"zRWzOuQT": "https://www.google.com"} gibi gibi.
 var redisClient = redis.NewClient(&redis.Options{
-	Addr: "redis:6379",
+	Addr: "url-shortener-redis:6379",
 })
 
 //convert algosu icin gerekli

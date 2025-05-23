@@ -14,7 +14,7 @@ var DB *sql.DB
 func Connect() error {
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        getEnv("DB_HOST", "db"),
+        getEnv("POSTGRES_HOST", "localhost"),
         getEnv("DB_PORT", "5432"),
         getEnv("DB_USER", "kerem"),
         getEnv("DB_PASSWORD", "kerem"),

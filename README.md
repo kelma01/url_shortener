@@ -23,3 +23,28 @@ curl --header "Content-Type: application/json" --request POST --data '{"original
 
 curl delete paylaod:
 curl -X DELETE http://localhost:8080/shorturl
+
+
+
+
+miniube start
+eval $(minikube docker-env)
+docker build -t <image_name> ./path-to-your-app
+kubectl apply -f k8s/
+docker image ile imageler gönrüntlkenebilir
+kubectl get svc ile servis isimleri görülebilir
+minikube service <servi-adi> ile deploy edilir.
+kubectl get pods ve kubectl logs <servis_name>
+
+
+minikube deploy etme olayı
+
+systemctl stop postgresql
+systemctl stop redis
+minikube start --driver=docker
+eval $(minikube -p minikube docker-env)
+docker build -t urltest .
+kubectl apply -f /k8s
+docker build -t urltest:latest . //????
+kubectl apply -f /k8s
+minikube service url-shortener-app
