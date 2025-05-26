@@ -5,16 +5,15 @@ import (
 	"math/rand"
 	"time"
 	"url_shortener/internal/database"
-	"github.com/redis/go-redis/v9"
 	"context"
+	"url_shortener/internal/redis"
+	"url_shortener/app/entities"
 )
 
 //redis client setupu
 //rediste tutulma structure'inda key degerleri short url kismi value'si ise original_url kisim oluyor
 // {"zRWzOuQT": "https://www.google.com"} gibi gibi.
-var redisClient = redis.NewClient(&redis.Options{
-	Addr: "url-shortener-redis:6379",
-})
+var redisClient = redis.RedisClient
 
 //convert algosu icin gerekli
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -90,21 +89,11 @@ func ListURLs(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	type URL struct {
-		OriginalURL string     `json:"original_url"`
-		ShortURL    string     `json:"short_url"`
-		UsageCount	int		   `json:"usage_count"`
-		CreatedAt   time.Time  `json:"created_at"`
-		DeletedAt	*time.Time `json:"deleted_at"`
-		ExpiresAt   *time.Time `json:"expires_at"`
-	}
-
-	//gosterilecek olan url tuplelarini tutacak
-	var urls []URL
+	//modelden gelen struct'i kullaniyor
+	var urls []entities.URL
 
 	for rows.Next() {
-		var u URL
+		var u entities.URL
 		if err := rows.Scan(&u.OriginalURL, &u.ShortURL, &u.UsageCount, &u.CreatedAt, &u.DeletedAt, &u.ExpiresAt); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
@@ -122,7 +111,7 @@ func RedirectURL(c *fiber.Ctx) error {
 
 	//rediste ttl kontorlü
     val, err := redisClient.Get(context.Background(), shortURL).Result()
-    if err == redis.Nil {
+    if err == redis.RedisNil {
         return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL expired or not found"})
     } else if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -140,18 +129,9 @@ func StatsURL(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "status bad request"})
 	}
 
-	type Result struct {
-		OriginalURL string     `json:"original_url"`
-		ShortURL    string     `json:"short_url"`
-		UsageCount  int        `json:"usage_count"`
-		CreatedAt   time.Time  `json:"created_at"`
-		DeletedAt   *time.Time `json:"deleted_at"`
-		ExpiresAt   *time.Time `json:"expires_at"`
-	}
+	var res entities.URL
 
-	var res Result
-
-	err := database.DB.QueryRow("SELECT original_url, short_url, usage_count, created_at, deleted_at, expires_at FROM url_table WHERE short_url=$1", shortURL,).Scan(&res.OriginalURL, &res.ShortURL, &res.UsageCount, &res.CreatedAt, &res.DeletedAt, &res.ExpiresAt)
+	err := database.DB.QueryRow("SELECT original_url, short_url, usage_count, created_at, deleted_at, expires_at FROM url_table WHERE short_url=$1", shortURL).Scan(&res.OriginalURL, &res.ShortURL, &res.UsageCount, &res.CreatedAt, &res.DeletedAt, &res.ExpiresAt)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
 	}
