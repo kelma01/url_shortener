@@ -1,13 +1,15 @@
 package shortener
 
 import (
-    "github.com/gofiber/fiber/v2"
+	"context"
 	"math/rand"
 	"time"
-	"url_shortener/internal/database"
-	"context"
-	"url_shortener/internal/redis"
 	"url_shortener/app/entities"
+	"url_shortener/internal/database"
+	"url_shortener/internal/redis"
+
+	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 //redis client setupu
@@ -48,11 +50,16 @@ func ShortenURL(c *fiber.Ctx) error {
 
 	redisClient.Set(context.Background(), short, body.OriginalURL, 5*time.Minute)
 
-
-	_ , err = database.DB.Exec("INSERT INTO url_table (original_url, short_url, created_at, expires_at) VALUES ($1, $2, $3, $4)", body.OriginalURL, short, now, expiresAt)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
+	url := entities.URL{
+		OriginalURL: body.OriginalURL,
+		ShortURL: short,
+		CreatedAt: now,
+		ExpiresAt: &expiresAt,
 	}
+	if err := database.DB.Create(&url).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"created_at":   now,
 		"deleted_at":   nil,
@@ -62,6 +69,7 @@ func ShortenURL(c *fiber.Ctx) error {
 		"usage_count":  0,
 	})
 }
+
 
 func generateShortURL(size int) string {
 	for {
@@ -74,33 +82,21 @@ func generateShortURL(size int) string {
 
 		//shorted url'lerin unique olmasi gerekli, bu yuzden her uretilen icin oncelikle db'de kontrolu yapiliyor
 		var exists bool
-		err := database.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM url_table WHERE short_url=$1)", short).Scan(&exists)
+		err := database.DB.Model(&entities.URL{}).Select("count(*) > 0").Where("short_url = ?", short).Find(&exists).Error
 		if err != nil {
-			return short
-		}
-		if !exists {
+			continue
+		} else {
 			return short
 		}
 	}
 }
-
 func ListURLs(c *fiber.Ctx) error {
-	rows, err := database.DB.Query("SELECT original_url, short_url, usage_count, created_at, deleted_at, expires_at FROM url_table")
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	//modelden gelen struct'i kullaniyor
-	var urls []entities.URL
+    var urls []entities.URL
 
-	for rows.Next() {
-		var u entities.URL
-		if err := rows.Scan(&u.OriginalURL, &u.ShortURL, &u.UsageCount, &u.CreatedAt, &u.DeletedAt, &u.ExpiresAt); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		urls = append(urls, u)
-	}
-
-	return c.JSON(urls)
+    if err := database.DB.Find(&urls).Error; err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+    }
+    return c.JSON(urls)
 }
 
 func RedirectURL(c *fiber.Ctx) error {
@@ -118,7 +114,9 @@ func RedirectURL(c *fiber.Ctx) error {
     }
 
 	//usage_count arttirici
-    _, _ = database.DB.Exec("UPDATE url_table SET usage_count = usage_count + 1 WHERE short_url = $1", shortURL)
+	if err := database.DB.Model(&entities.URL{}).Where("short_url = ?", shortURL).Update("usage_count", gorm.Expr("usage_count + ?", 1)).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
 
     return c.Redirect(val, fiber.StatusTemporaryRedirect)
 }
@@ -131,11 +129,10 @@ func StatsURL(c *fiber.Ctx) error {
 
 	var res entities.URL
 
-	err := database.DB.QueryRow("SELECT original_url, short_url, usage_count, created_at, deleted_at, expires_at FROM url_table WHERE short_url=$1", shortURL).Scan(&res.OriginalURL, &res.ShortURL, &res.UsageCount, &res.CreatedAt, &res.DeletedAt, &res.ExpiresAt)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "URL not found"})
-	}
-	return c.JSON(res)
+	if err := database.DB.Where("short_url = ?", shortURL).First(&res).Error; err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+    }
+    return c.JSON(res)
 }
 
 func DeleteURL(c *fiber.Ctx) error {
@@ -147,7 +144,9 @@ func DeleteURL(c *fiber.Ctx) error {
 	//redisi sifirlamak yeterli cunku zaten redirect ederken redis'teki ttl'i de kontrol ederek redirect ediyor, redis.del islemi yeterli
 	_, _ = redisClient.Del(context.Background(), shortURL).Result()
 
-	_, _ = database.DB.Exec("UPDATE url_table SET deleted_at=$1 WHERE short_url = $2", time.Now(), shortURL)
-	
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "URL deleted successfully"})
+	if err := database.DB.Model(&entities.URL{}).Where("short_url = ?", shortURL).Update("deleted_at", time.Now()).Error; err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+    }
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "URL deleted succeessfully"})
 }

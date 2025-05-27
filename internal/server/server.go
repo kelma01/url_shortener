@@ -5,7 +5,6 @@ import (
 	"url_shortener/internal/database"
 	"url_shortener/app/routes"
 	"github.com/gofiber/fiber/v2"
-	"url_shortener/internal/migrations"
 )
 
 func RunServer(){
@@ -15,9 +14,6 @@ func RunServer(){
 	}
 
 	log.Println("DB connection successful")
-
-	//db ile migrate
-	migrations.Migrate(database.DB)
 
 	app := fiber.New()
 	//routes pathinde belirtilen routelarin tanimlanmasi

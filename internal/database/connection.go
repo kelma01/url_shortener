@@ -1,76 +1,70 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 
 	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+    "github.com/joho/godotenv"
 )
 
-var DB *sql.DB
+/* var DB *sql.DB */
+var DB *gorm.DB
+
 
 //db config
-//localhost
-func Connect() error {
+//localhost ve docker
+func Connect(models ...interface{}) error {
+    if err := godotenv.Load(); err != nil {
+        fmt.Println(err)
+    }
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        getEnv("DB_HOST", "localhost"),
-        getEnv("DB_PORT", "5432"),
-        getEnv("DB_USER", "kerem"),
-        getEnv("DB_PASSWORD", "kerem"),
-        getEnv("DB_NAME", "url_shortener"),
+        getEnv("DB_HOST", "null"),
+        getEnv("DB_PORT", "null"),
+        getEnv("DB_USER", "null"),
+        getEnv("DB_PASSWORD", "null"),
+        getEnv("DB_NAME", "null"),
     )
-    db, err := sql.Open("postgres", connection)
+
+    db, err := gorm.Open(postgres.Open(connection), &gorm.Config{})
     if err != nil {
         return err
     }
-    if err := db.Ping(); err != nil {
+    DB = db
+
+    if err := AutoMigrate(models...); err != nil {
         return err
     }
-    DB = db
-    
-    
+
     return nil
 }
- //docker
-/*  func Connect() error {
-    connection := fmt.Sprintf(
-        "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        getEnv("DB_HOST", "db"),
-        getEnv("DB_PORT", "5432"),
-        getEnv("DB_USER", "kerem"),
-        getEnv("DB_PASSWORD", "kerem"),
-        getEnv("DB_NAME", "url_shortener"),
-    )
-    db, err := sql.Open("postgres", connection)
-    if err != nil {
-        return err
-    }
-    if err := db.Ping(); err != nil {
-        return err
-    }
-    DB = db
-    return nil
-} */
 //kubernetes
 /* func Connect() error {
+    if err := godotenv.Load(); err != nil {
+        fmt.Println(err)
+    }
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        getEnv("POSTGRES_HOST", "localhost"),
-        getEnv("DB_PORT", "5432"),
-        getEnv("DB_USER", "kerem"),
-        getEnv("DB_PASSWORD", "kerem"),
-        getEnv("DB_NAME", "url_shortener"),
+        getEnv("POSTGRES_HOST", "null"),
+        getEnv("DB_PORT", "null"),
+        getEnv("DB_USER", "null"),
+        getEnv("DB_PASSWORD", "null"),
+        getEnv("DB_NAME", "null"),
     )
-    db, err := sql.Open("postgres", connection)
+
+    db, err := gorm.Open(postgres.Open(connection), &gorm.Config{})
     if err != nil {
         return err
     }
-    if err := db.Ping(); err != nil {
+    DB = db
+
+    if err := AutoMigrate(models...); err != nil {
         return err
     }
-    DB = db
+
     return nil
 } */
 
@@ -79,4 +73,10 @@ func getEnv(key, fallback string) string {
         return value
     }
     return fallback
+}
+func AutoMigrate(models ...interface{}) error {
+    if DB == nil {
+        return fmt.Errorf("database connection is not initialized")
+    }
+    return DB.AutoMigrate(models...)
 }
