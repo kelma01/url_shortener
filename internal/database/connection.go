@@ -2,21 +2,33 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
     "github.com/joho/godotenv"
-    "url_shortener/internal/opentelemetry"
+    
+    _ "url_shortener/internal/opentelemetry"
 )
 
 var DB *gorm.DB
+
+func init() {
+    if err := Connect(); err != nil {
+        log.Fatalf("DB connection failed: %v", err)
+        os.Exit(1)
+    }
+    log.Println("PostgreSQL OK")
+}
 
 
 //db config
 //localhost ve docker
 func Connect(models ...interface{}) error {
     if err := godotenv.Load(); err != nil {
-        fmt.Println(err)
+        log.Println(err)
     }
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -36,17 +48,13 @@ func Connect(models ...interface{}) error {
     if err := AutoMigrate(models...); err != nil {
         return err
     }
-    if err := opentelemetry.InitTracing(db); err != nil {
-        panic("Failed to initialize opentelemetry plugin: " + err.Error())
-    }
-    fmt.Println("Opentelemetry plugin initialized.")
 
     return nil
 }
 //kubernetes
 /* func Connect() error {
     if err := godotenv.Load(); err != nil {
-        fmt.Println(err)
+        log.Println(err)
     }
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -66,7 +74,7 @@ func Connect(models ...interface{}) error {
     if err := AutoMigrate(models...); err != nil {
         return err
     }
-
+    
     return nil
 } */
 

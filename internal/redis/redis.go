@@ -1,8 +1,9 @@
 package redis
 
 import (
-	"fmt"
+	"log"
 	"os"
+	
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
@@ -20,7 +21,7 @@ func getEnv(key, fallback string) string {
 
 func init() {
 	if err := godotenv.Load(); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	RedisAddr := getEnv("REDIS_ADDR", "null")
 	RedisPort := getEnv("REDIS_PORT", "null")
@@ -28,4 +29,6 @@ func init() {
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr: RedisAddr + ":" + RedisPort,
 	})
+
+	log.Println("Redis OK")
 }
