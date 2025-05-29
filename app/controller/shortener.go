@@ -2,21 +2,23 @@ package shortener
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"os/exec"
 	"time"
 	"url_shortener/app/entities"
 	"url_shortener/internal/database"
 	"url_shortener/internal/redis"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
-	"fmt"
-	"os/exec"
 )
 
 //redis client setupu
 //rediste tutulma structure'inda key degerleri short url kismi value'si ise original_url kisim oluyor
 // {"zRWzOuQT": "https://www.google.com"} gibi gibi.
 var redisClient = redis.RedisClient
+
+
 
 //convert algosu icin gerekli
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

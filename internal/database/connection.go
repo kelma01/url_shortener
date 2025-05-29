@@ -6,6 +6,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
     "github.com/joho/godotenv"
+    "url_shortener/internal/opentelemetry"
 )
 
 var DB *gorm.DB
@@ -35,6 +36,10 @@ func Connect(models ...interface{}) error {
     if err := AutoMigrate(models...); err != nil {
         return err
     }
+    if err := opentelemetry.InitTracing(db); err != nil {
+        panic("Failed to initialize opentelemetry plugin: " + err.Error())
+    }
+    fmt.Println("Opentelemetry plugin initialized.")
 
     return nil
 }
