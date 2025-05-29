@@ -3,14 +3,11 @@ package database
 import (
 	"fmt"
 	"os"
-
-	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
     "github.com/joho/godotenv"
 )
 
-/* var DB *sql.DB */
 var DB *gorm.DB
 
 

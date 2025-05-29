@@ -7,9 +7,10 @@ import (
 	"url_shortener/app/entities"
 	"url_shortener/internal/database"
 	"url_shortener/internal/redis"
-
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
+	"fmt"
+	"os/exec"
 )
 
 //redis client setupu
@@ -59,6 +60,12 @@ func ShortenURL(c *fiber.Ctx) error {
 	if err := database.DB.Create(&url).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	//localden container'a yollarken kullanildi
+	urlPath := "http://localhost:8123/?user=default&password=123456&database=otel"
+	data := fmt.Sprintf(`INSERT INTO url_table (original_url, short_url, expires_at) VALUES ('%s', '%s', toDateTime('%s'))`, body.OriginalURL, short, expiresAt.Format("2006-01-02 15:04:05"),)
+	cmd := exec.Command("curl", "-s", "-X", "POST", urlPath, "--data-binary", data)
+	cmd.CombinedOutput()
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"created_at":   now,

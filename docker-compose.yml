@@ -9,7 +9,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - REDIS_ADDR=redis:6379
+      - REDIS_ADDR=${REDIS_ADDR}
       - POSTGRES_HOST=${DB_HOST}
       - POSTGRES_PORT=${DB_PORT}
       - POSTGRES_USER=${DB_USER}
