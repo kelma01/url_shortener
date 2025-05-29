@@ -34,7 +34,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	if db.Use(tracing.NewPlugin(tracing.WithoutMetrics())); err != nil {
+	if err := db.Use(tracing.NewPlugin(tracing.WithoutMetrics())); err != nil {
 		panic(err)
 	}
 	log.Println("Opentelemetry OK")
@@ -61,7 +61,7 @@ func InitTracer() func() {
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	return func() { 
+	return func() {
 		_ = tp.Shutdown(context.Background())
 	}
 }
