@@ -23,8 +23,8 @@ func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Println(err)
 	}
-	RedisAddr := getEnv("REDIS_ADDR", "null")
-	RedisPort := getEnv("REDIS_PORT", "null")
+	RedisAddr := os.Getenv("REDIS_ADDR")
+	RedisPort := os.Getenv("REDIS_PORT")
 
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr: RedisAddr + ":" + RedisPort,

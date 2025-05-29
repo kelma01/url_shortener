@@ -7,8 +7,12 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	_ "gorm.io/gorm/logger"
+
+	"go.opentelemetry.io/otel/attribute"
 
     "github.com/joho/godotenv"
+	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
     
     _ "url_shortener/internal/opentelemetry"
 )
@@ -32,17 +36,20 @@ func Connect(models ...interface{}) error {
     }
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        getEnv("DB_HOST", "null"),
-        getEnv("DB_PORT", "null"),
-        getEnv("DB_USER", "null"),
-        getEnv("DB_PASSWORD", "null"),
-        getEnv("DB_NAME", "null"),
+        os.Getenv("DB_HOST"), //k8s ise POSTGRES_HOST olmali
+        os.Getenv("DB_PORT"),
+        os.Getenv("DB_USER"),
+        os.Getenv("DB_PASSWORD"),
+        os.Getenv("DB_NAME"),
     )
 
     db, err := gorm.Open(postgres.Open(connection), &gorm.Config{})
     if err != nil {
         return err
     }
+    if err := db.Use(otelgorm.NewPlugin(otelgorm.WithAttributes(attribute.String("DB_HOST", os.Getenv("DB_HOST"))))); err != nil {
+		panic(err)
+	}
     DB = db
 
     if err := AutoMigrate(models...); err != nil {
@@ -51,32 +58,6 @@ func Connect(models ...interface{}) error {
 
     return nil
 }
-//kubernetes
-/* func Connect() error {
-    if err := godotenv.Load(); err != nil {
-        log.Println(err)
-    }
-    connection := fmt.Sprintf(
-        "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        getEnv("POSTGRES_HOST", "null"),
-        getEnv("DB_PORT", "null"),
-        getEnv("DB_USER", "null"),
-        getEnv("DB_PASSWORD", "null"),
-        getEnv("DB_NAME", "null"),
-    )
-
-    db, err := gorm.Open(postgres.Open(connection), &gorm.Config{})
-    if err != nil {
-        return err
-    }
-    DB = db
-
-    if err := AutoMigrate(models...); err != nil {
-        return err
-    }
-    
-    return nil
-} */
 
 func getEnv(key, fallback string) string {
     if value, ok := os.LookupEnv(key); ok {

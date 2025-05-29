@@ -3,13 +3,17 @@ package opentelemetry
 import (
 	"context"
 	"log"
+
 	"os"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -37,19 +41,27 @@ func init() {
 }
 
 func InitTracer() func() {
-	output_file := "traces.log"
-	f, err := os.OpenFile(output_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic("Failed to open traces.log: " + err.Error())
-	}
-	exporter, _ := stdouttrace.New(
-		stdouttrace.WithPrettyPrint(),	//terminale basilmasi icin
-		//stdouttrace.WithWriter(f),		//disari file'a export edilmesi icin
+	otelPort := os.Getenv("OTEL_COLLECTOR_PORT")
+	exporter, err := otlptracegrpc.New(
+		context.Background(),
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint("localhost:"+otelPort),
 	)
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
+	if err != nil {
+		panic(err)
+	}
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(
+			resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.ServiceNameKey.String(os.Getenv("APP_SERVICE_NAME")),
+			)),
+	)
 	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 	return func() { 
 		_ = tp.Shutdown(context.Background())
-		_ = f.Close()
 	}
 }
