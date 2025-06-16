@@ -11,7 +11,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 
-    "github.com/joho/godotenv"
 	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
     
     _ "url_shortener/internal/opentelemetry"
@@ -31,9 +30,6 @@ func init() {
 //db config
 //localhost ve docker
 func Connect(models ...interface{}) error {
-    if err := godotenv.Load(); err != nil {
-        log.Println(err)
-    }
     connection := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
         os.Getenv("DB_HOST"), //k8s ise POSTGRES_HOST olmali
